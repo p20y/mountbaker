@@ -2,7 +2,7 @@
  * Supabase Storage operations for Financial Sankey Agent
  */
 
-import { supabaseAdmin } from './server'
+import { requireSupabase } from './server'
 
 const PDF_BUCKET = 'pdf-uploads'
 const DIAGRAM_BUCKET = 'diagrams'
@@ -15,6 +15,7 @@ export async function uploadPDF(
   filename: string,
   statementId?: string
 ): Promise<string> {
+  const supabaseAdmin = requireSupabase()
   const path = statementId ? `${statementId}/${filename}` : filename
 
   const { data, error } = await supabaseAdmin.storage
@@ -35,6 +36,7 @@ export async function uploadPDF(
  * Get a signed URL for downloading a PDF
  */
 export async function getPDFUrl(path: string, expiresIn: number = 3600): Promise<string> {
+  const supabaseAdmin = requireSupabase()
   const { data, error } = await supabaseAdmin.storage
     .from(PDF_BUCKET)
     .createSignedUrl(path, expiresIn)
@@ -55,6 +57,7 @@ export async function uploadDiagram(
   statementId: string,
   contentType: 'image/png' | 'image/jpeg' | 'image/svg+xml' = 'image/png'
 ): Promise<string> {
+  const supabaseAdmin = requireSupabase()
   const path = `${statementId}/${filename}`
 
   const { data, error } = await supabaseAdmin.storage
@@ -75,6 +78,7 @@ export async function uploadDiagram(
  * Get a signed URL for downloading a diagram
  */
 export async function getDiagramUrl(path: string, expiresIn: number = 3600): Promise<string> {
+  const supabaseAdmin = requireSupabase()
   const { data, error } = await supabaseAdmin.storage
     .from(DIAGRAM_BUCKET)
     .createSignedUrl(path, expiresIn)
@@ -90,6 +94,7 @@ export async function getDiagramUrl(path: string, expiresIn: number = 3600): Pro
  * Delete a file from storage
  */
 export async function deleteFile(bucket: string, path: string): Promise<void> {
+  const supabaseAdmin = requireSupabase()
   const { error } = await supabaseAdmin.storage
     .from(bucket)
     .remove([path])
@@ -103,6 +108,8 @@ export async function deleteFile(bucket: string, path: string): Promise<void> {
  * Delete all files for a statement
  */
 export async function deleteStatementFiles(statementId: string): Promise<void> {
+  const supabaseAdmin = requireSupabase()
+  
   // Delete PDF
   const { data: pdfFiles } = await supabaseAdmin.storage
     .from(PDF_BUCKET)

@@ -2,7 +2,7 @@
  * Database operations for Financial Sankey Agent
  */
 
-import { supabaseAdmin } from './server'
+import { requireSupabase } from './server'
 import type { Database } from './types'
 
 type Statement = Database['public']['Tables']['statements']['Row']
@@ -18,13 +18,23 @@ type VerificationInsert = Database['public']['Tables']['verifications']['Insert'
 export async function createStatement(
   data: Omit<StatementInsert, 'id' | 'created_at' | 'updated_at'>
 ): Promise<Statement> {
+  const supabaseAdmin = requireSupabase()
+  
+  // Explicitly set schema
   const { data: statement, error } = await supabaseAdmin
+    .schema('public')
     .from('statements')
     .insert(data)
     .select()
     .single()
 
   if (error) {
+    // Provide more helpful error message
+    if (error.message.includes('schema cache') || error.message.includes('not found')) {
+      throw new Error(
+        `Table 'statements' does not exist. Please run the migration: supabase/migrations/001_initial_schema.sql in your Supabase SQL Editor. Error: ${error.message}`
+      )
+    }
     throw new Error(`Failed to create statement: ${error.message}`)
   }
 
@@ -35,6 +45,7 @@ export async function createStatement(
  * Get a statement by ID
  */
 export async function getStatement(id: string): Promise<Statement | null> {
+  const supabaseAdmin = requireSupabase()
   const { data, error } = await supabaseAdmin
     .from('statements')
     .select('*')
@@ -58,6 +69,7 @@ export async function updateStatementStatus(
   id: string,
   status: 'pending' | 'processing' | 'completed' | 'failed'
 ): Promise<Statement> {
+  const supabaseAdmin = requireSupabase()
   const { data, error } = await supabaseAdmin
     .from('statements')
     .update({ status, updated_at: new Date().toISOString() })
@@ -79,6 +91,7 @@ export async function insertFlows(
   statementId: string,
   flows: Omit<FlowInsert, 'id' | 'statement_id' | 'created_at'>[]
 ): Promise<Flow[]> {
+  const supabaseAdmin = requireSupabase()
   const flowsToInsert: FlowInsert[] = flows.map(flow => ({
     ...flow,
     statement_id: statementId,
@@ -100,6 +113,7 @@ export async function insertFlows(
  * Get flows for a statement
  */
 export async function getFlows(statementId: string): Promise<Flow[]> {
+  const supabaseAdmin = requireSupabase()
   const { data, error } = await supabaseAdmin
     .from('flows')
     .select('*')
@@ -119,6 +133,7 @@ export async function getFlows(statementId: string): Promise<Flow[]> {
 export async function createVerification(
   data: Omit<VerificationInsert, 'id' | 'created_at'>
 ): Promise<Verification> {
+  const supabaseAdmin = requireSupabase()
   const { data: verification, error } = await supabaseAdmin
     .from('verifications')
     .insert(data)
@@ -136,6 +151,7 @@ export async function createVerification(
  * Get verification for a statement
  */
 export async function getVerification(statementId: string): Promise<Verification | null> {
+  const supabaseAdmin = requireSupabase()
   const { data, error } = await supabaseAdmin
     .from('verifications')
     .select('*')
@@ -158,6 +174,7 @@ export async function getVerification(statementId: string): Promise<Verification
  * Delete statement and all related data (cascade)
  */
 export async function deleteStatement(id: string): Promise<void> {
+  const supabaseAdmin = requireSupabase()
   const { error } = await supabaseAdmin
     .from('statements')
     .delete()

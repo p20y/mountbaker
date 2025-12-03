@@ -22,7 +22,7 @@ export const FinancialFlowSchema = z.object({
   id: z.string().optional(),
   source: z.string().min(1, 'Source is required'),
   target: z.string().min(1, 'Target is required'),
-  amount: z.number().positive('Amount must be positive'),
+  amount: z.number().nonnegative('Amount must be non-negative'),
   category: FlowCategorySchema,
   metadata: z.object({
     lineItem: z.string().optional(),
@@ -36,8 +36,14 @@ export const FinancialFlowSchema = z.object({
 export const StatementMetadataSchema = z.object({
   company: z.string().min(1, 'Company name is required'),
   period: z.object({
-    start: z.date(),
-    end: z.date(),
+    start: z.union([
+      z.date(),
+      z.string().transform((str) => new Date(str))
+    ]),
+    end: z.union([
+      z.date(),
+      z.string().transform((str) => new Date(str))
+    ]),
     quarter: z.number().int().min(1).max(4),
     year: z.number().int().min(2000).max(2100)
   }),

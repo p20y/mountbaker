@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS statements (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID, -- Optional: for multi-user support
   filename TEXT NOT NULL,
-  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'completed', 'failed')),
+  status TEXT NOT NULL DEFAULT 'pending',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -20,8 +20,8 @@ CREATE TABLE IF NOT EXISTS flows (
   statement_id UUID NOT NULL REFERENCES statements(id) ON DELETE CASCADE,
   source TEXT NOT NULL,
   target TEXT NOT NULL,
-  amount NUMERIC(15, 2) NOT NULL CHECK (amount > 0),
-  category TEXT NOT NULL CHECK (category IN ('revenue', 'expense', 'asset', 'liability', 'equity')),
+  amount NUMERIC(15, 2) NOT NULL,
+  category TEXT NOT NULL,
   line_item TEXT,
   statement_section TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS flows (
 CREATE TABLE IF NOT EXISTS verifications (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   statement_id UUID NOT NULL REFERENCES statements(id) ON DELETE CASCADE,
-  accuracy NUMERIC(5, 4) NOT NULL CHECK (accuracy >= 0 AND accuracy <= 1),
+  accuracy NUMERIC(5, 4) NOT NULL,
   verified BOOLEAN NOT NULL DEFAULT false,
   reasoning TEXT NOT NULL,
   flows_verified INTEGER NOT NULL DEFAULT 0,

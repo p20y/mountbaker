@@ -45,122 +45,122 @@
     - Test verification record creation
     - _Requirements: 7.2_
 
-- [ ] 4. Implement PDF parsing and text extraction
-  - [ ] 4.1 Create PDF parser utility
+- [x] 4. Implement PDF parsing and text extraction
+  - [x] 4.1 Create PDF parser utility
     - Implement PDF text extraction using pdf-parse
     - Handle scanned PDFs (detect low text content)
     - Extract tables and structured data
     - _Requirements: 1.1, 1.2_
 
-  - [ ]* 4.2 Write unit tests for PDF parsing
+  - [x]* 4.2 Write unit tests for PDF parsing
     - Test with sample financial statement PDFs
     - Test with scanned PDFs
     - Test error handling for corrupted PDFs
     - _Requirements: 1.4_
 
-- [ ] 5. Implement Gemini Flash extraction agent
-  - [ ] 5.1 Create extraction service
+- [x] 5. Implement Gemini Flash extraction agent
+  - [x] 5.1 Create extraction service
     - Initialize Gemini Flash client with API key
     - Implement structured output extraction with JSON schema
     - Create prompt template for financial data extraction
     - Parse and validate Gemini response with Zod
     - _Requirements: 1.2, 1.3, 5.1_
 
-  - [ ] 5.2 Implement retry logic for extraction failures
+  - [x] 5.2 Implement retry logic for extraction failures
     - Add retry mechanism with exponential backoff
     - Enhance prompts on retry attempts
     - Log extraction attempts and results
     - _Requirements: 6.3, 6.4_
 
-  - [ ]* 5.3 Write property test for extraction accuracy
+  - [x]* 5.3 Write property test for extraction accuracy
     - **Property 10: Extraction accuracy threshold**
     - **Validates: Requirements 5.1**
 
-  - [ ]* 5.4 Write property test for complete data extraction
+  - [x]* 5.4 Write property test for complete data extraction
     - **Property 2: Complete data extraction**
     - **Validates: Requirements 1.2, 1.3**
 
-- [ ] 6. Checkpoint - Ensure all tests pass
+- [x] 6. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 7. Implement Nano Banana diagram generation agent
-  - [ ] 7.1 Create generation service
+- [x] 7. Implement Nano Banana diagram generation agent
+  - [x] 7.1 Create generation service
     - Initialize Gemini 2.5 Flash Image client
     - Create prompt template for Sankey diagram generation
     - Format financial flows into clear prompt structure
     - Handle image response and convert to buffer
     - _Requirements: 2.1, 2.2, 2.3, 2.4_
 
-  - [ ] 7.2 Implement diagram styling and configuration
+  - [x] 7.2 Implement diagram styling and configuration
     - Define color scheme for flow categories (revenue=green, expense=red, etc.)
     - Configure image dimensions (1024x1024)
     - Ensure arrow widths proportional to amounts in prompt
     - _Requirements: 2.2, 2.3_
 
-  - [ ]* 7.3 Write property test for flow proportionality
+  - [x]* 7.3 Write property test for flow proportionality
     - **Property 4: Flow proportionality preservation**
     - **Validates: Requirements 2.2**
 
-  - [ ]* 7.4 Write property test for visual category distinction
+  - [x]* 7.4 Write property test for visual category distinction
     - **Property 5: Visual category distinction**
     - **Validates: Requirements 2.3**
 
-- [ ] 8. Implement Gemini Flash Vision verification agent
-  - [ ] 8.1 Create verification service
+- [x] 8. Implement Gemini Flash Vision verification agent
+  - [x] 8.1 Create verification service
     - Initialize Gemini Flash Vision client
     - Create prompt template for diagram verification
     - Extract flow values from diagram image using vision
     - Compare extracted values against original flows
     - _Requirements: 3.1, 3.2, 5.3_
 
-  - [ ] 8.2 Implement discrepancy detection and reporting
+  - [x] 8.2 Implement discrepancy detection and reporting
     - Calculate percentage error for each flow
     - Identify discrepancies exceeding 0.1% threshold
     - Generate reasoning for correctness/incorrectness
     - Create detailed verification report
     - _Requirements: 3.3, 3.4, 3.5, 5.3_
 
-  - [ ]* 8.3 Write property test for verification accuracy detection
+  - [x]* 8.3 Write property test for verification accuracy detection
     - **Property 7: Verification accuracy detection**
     - **Validates: Requirements 3.4, 5.3**
 
-  - [ ]* 8.4 Write property test for successful verification outcomes
+  - [x]* 8.4 Write property test for successful verification outcomes
     - **Property 8: Successful verification outcomes**
     - **Validates: Requirements 3.3, 3.5**
 
-- [ ] 9. Implement orchestrator function
-  - [ ] 9.1 Create main orchestration logic
+- [x] 9. Implement orchestrator function
+  - [x] 9.1 Create main orchestration logic
     - Implement pipeline: Extract → Generate → Verify
     - Handle data flow between agents
     - Store intermediate results in Supabase
     - _Requirements: 6.2, 7.2_
 
-  - [ ] 9.2 Implement retry and regeneration logic
+  - [x] 9.2 Implement retry and regeneration logic
     - Add retry loop for verification failures (max 3 retries)
     - Enhance generation prompts on retry attempts
     - Track retry count and log attempts
     - _Requirements: 5.4_
 
-  - [ ] 9.3 Implement error handling and graceful degradation
+  - [x] 9.3 Implement error handling and graceful degradation
     - Handle agent failures without cascading errors
     - Return partial results when possible
     - Log detailed error information
     - Generate user-friendly error messages
     - _Requirements: 2.5, 6.3, 6.4, 7.5_
 
-  - [ ]* 9.4 Write property test for retry logic
+  - [x]* 9.4 Write property test for retry logic
     - **Property 9: Retry logic on verification failure**
     - **Validates: Requirements 5.4**
 
-  - [ ]* 9.5 Write property test for graceful failure handling
+  - [x]* 9.5 Write property test for graceful failure handling
     - **Property 13: Graceful failure handling**
     - **Validates: Requirements 2.5, 6.3, 6.4**
 
-- [ ] 10. Checkpoint - Ensure all tests pass
+- [x] 10. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 11. Create Vercel API endpoints
-  - [ ] 11.1 Implement file upload endpoint
+- [x] 11. Create Vercel API endpoints
+  - [x] 11.1 Implement file upload endpoint
     - Create POST /api/upload endpoint
     - Handle PDF file upload
     - Validate file format and size
@@ -168,47 +168,47 @@
     - Return upload confirmation
     - _Requirements: 1.1, 1.4_
 
-  - [ ] 11.2 Implement processing endpoint
+  - [x] 11.2 Implement processing endpoint
     - Create POST /api/process endpoint
     - Invoke orchestrator function
     - Return processing status
     - _Requirements: 1.1_
 
-  - [ ] 11.3 Implement results endpoint
+  - [x] 11.3 Implement results endpoint
     - Create GET /api/results/:id endpoint
     - Retrieve diagram and verification report
     - Format response with metadata
     - _Requirements: 7.1, 7.2, 7.3, 7.4_
 
-  - [ ]* 11.4 Write property test for valid input acceptance
+  - [x]* 11.4 Write property test for valid input acceptance
     - **Property 1: Valid input acceptance and processing**
     - **Validates: Requirements 1.1, 2.1, 2.4**
 
-  - [ ]* 11.5 Write property test for invalid input rejection
+  - [x]* 11.5 Write property test for invalid input rejection
     - **Property 3: Invalid input rejection**
     - **Validates: Requirements 1.4, 1.5**
 
-- [ ] 12. Build Next.js frontend
-  - [ ] 12.1 Create file upload component
+- [x] 12. Build Next.js frontend
+  - [x] 12.1 Create file upload component
     - Build drag-and-drop file upload UI
     - Add file validation (PDF only, size limits)
     - Show upload progress
     - _Requirements: 1.1_
 
-  - [ ] 12.2 Create processing status component
+  - [x] 12.2 Create processing status component
     - Display processing stages (Extract → Generate → Verify)
     - Show progress indicators
     - Handle loading states
     - _Requirements: 7.3_
 
-  - [ ] 12.3 Create results display component
+  - [x] 12.3 Create results display component
     - Display generated Sankey diagram
     - Show verification report with accuracy metrics
     - Display reasoning for correctness
     - Show processing metadata (time, retries)
     - _Requirements: 7.1, 7.2, 7.3_
 
-  - [ ] 12.4 Implement error handling UI
+  - [x] 12.4 Implement error handling UI
     - Display user-friendly error messages
     - Show partial results when available
     - Provide retry option
