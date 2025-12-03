@@ -39,7 +39,7 @@ VERIFICATION REQUIREMENTS:
 
 OUTPUT FORMAT (JSON):
 {
-  "verified": boolean,
+  "timestamp": "ISO date string",
   "overallAccuracy": number (0.0-1.0),
   "flowsVerified": number,
   "flowsTotal": number,
@@ -51,6 +51,9 @@ OUTPUT FORMAT (JSON):
       "percentageError": number
     }
   ],
+  "passed": boolean (true if all flows within threshold, false otherwise),
+  "confidenceScore": number (0.0-1.0, confidence in verification result),
+  "reasoning": "Detailed explanation of verification results, including specific value comparisons, accuracy metrics, and explanation of why diagram is correct/incorrect",
   "valueComparisons": [
     {
       "flow": "source -> target",
@@ -59,8 +62,7 @@ OUTPUT FORMAT (JSON):
       "match": boolean,
       "error": number (optional, if mismatch)
     }
-  ],
-  "reasoning": "Detailed explanation of verification results, including specific value comparisons, accuracy metrics, and explanation of why diagram is correct/incorrect"
+  ]
 }
 
 IMPORTANT:

@@ -34,6 +34,33 @@ vi.mock('@/lib/agents/orchestrator', () => ({
   orchestrate: vi.fn()
 }))
 
+vi.mock('@/lib/supabase/server', () => ({
+  isSupabaseConfigured: true,
+  requireSupabase: vi.fn(() => ({
+    from: vi.fn(() => ({
+      insert: vi.fn(() => ({
+        select: vi.fn(() => ({
+          single: vi.fn()
+        }))
+      })),
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          single: vi.fn()
+        }))
+      })),
+      update: vi.fn(() => ({
+        eq: vi.fn()
+      }))
+    })),
+    storage: {
+      from: vi.fn(() => ({
+        upload: vi.fn(),
+        createSignedUrl: vi.fn()
+      }))
+    }
+  }))
+}))
+
 describe('API Endpoints', () => {
   beforeEach(() => {
     vi.clearAllMocks()

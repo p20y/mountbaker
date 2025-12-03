@@ -4,7 +4,7 @@
  * Generates Sankey diagrams from financial flows using Gemini 2.5 Flash Image.
  */
 
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { GoogleGenAI } from '@google/genai'
 import type { AnalysisOutput } from '@/lib/schemas'
 import type { GenerationOutput as GenerationOutputType } from '@/types/models'
 import { createDiagramPrompt, createRetryPrompt } from './prompts'
@@ -88,52 +88,74 @@ export async function generateDiagram(
             attempt
           )
 
-      // Initialize Gemini client
-      const genAI = new GoogleGenerativeAI(apiKey)
+      // Initialize Gemini client using the new Gen AI SDK
+      // According to https://ai.google.dev/gemini-api/docs/image-generation
+      // We use @google/genai for image generation support
+      const client = new GoogleGenAI({ apiKey })
+
+      // Use Gemini Nano Banana (Gemini 2.5 Flash Image) for image generation
+      // Model name: gemini-2.5-flash-image (official name per documentation)
+      const modelName = 'gemini-2.5-flash-image'
       
-      // Use Gemini 2.5 Flash Image for image generation
-      // Note: Model name may need adjustment based on actual available models
-      const model = genAI.getGenerativeModel({ 
-        model: 'gemini-2.5-flash-image-exp' // or 'gemini-2.5-flash-image' if exp not available
+      // Generate image using the new SDK API
+      // API: client.models.generateContent({ model, contents })
+      const response = await client.models.generateContent({
+        model: modelName,
+        contents: prompt,
       })
 
-      // Generate image
-      const result = await model.generateContent(prompt)
-      const response = await result.response
-
-      // Extract image data
-      // Note: The actual API response format may vary
-      // This is a placeholder - adjust based on actual Gemini Image API response
-      const imageData = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data
+      // Extract image data from response
+      // According to documentation: https://ai.google.dev/gemini-api/docs/image-generation
+      // Response structure: response.candidates[0].content.parts[]
+      // Each part can have: part.text or part.inlineData
+      // Image data is in: part.inlineData.data (base64 string)
       
-      if (!imageData) {
-        // If image data is not in expected format, try alternative extraction
-        // Some models return base64 encoded images
-        const text = response.text()
-        if (text) {
-          // Try to extract base64 image data from response
-          const base64Match = text.match(/data:image\/[^;]+;base64,([^"]+)/)
+      let imageData: string | undefined
+      
+      // Extract from response.candidates[0].content.parts
+      const parts = response.candidates?.[0]?.content?.parts || []
+      
+      for (const part of parts) {
+        // Check for inlineData with image data
+        if (part.inlineData?.data) {
+          imageData = part.inlineData.data
+          break
+        }
+        // Also check for text (in case model returns text description)
+        if (part.text) {
+          // Try to extract base64 from text if present
+          const base64Match = part.text.match(/data:image\/[^;]+;base64,([A-Za-z0-9+/=]+)/)
           if (base64Match) {
-            const imageBuffer = Buffer.from(base64Match[1], 'base64')
-            return {
-              diagram: imageBuffer,
-              renderMetadata: {
-                width: dimensions.width,
-                height: dimensions.height,
-                format: 'png'
-              },
-              chartData: {
-                flows: input.flows
-              }
-            }
+            imageData = base64Match[1]
+            break
           }
         }
+      }
+      
+      if (!imageData) {
+        // Log response structure for debugging
+        console.error('Gemini Nano Banana response structure:', JSON.stringify({
+          hasCandidates: !!response.candidates,
+          candidatesLength: response.candidates?.length || 0,
+          partsLength: parts.length,
+          parts: parts.map((p: any) => ({
+            keys: Object.keys(p),
+            hasText: 'text' in p,
+            hasInlineData: 'inlineData' in p,
+            inlineDataKeys: p.inlineData ? Object.keys(p.inlineData) : []
+          }))
+        }, null, 2))
         
-        throw new Error('No image data found in response')
+        throw new Error(`No image data found in Gemini Nano Banana response. Response has ${response.candidates?.length || 0} candidate(s) with ${parts.length} part(s). Expected image data in part.inlineData.data.`)
       }
 
       // Convert base64 to buffer
       const imageBuffer = Buffer.from(imageData, 'base64')
+      
+      // Validate it's a reasonable image size (at least 1KB for a valid image)
+      if (imageBuffer.length < 1024) {
+        throw new Error(`Image data too small (${imageBuffer.length} bytes). Expected at least 1KB for a valid image.`)
+      }
 
       return {
         diagram: imageBuffer,

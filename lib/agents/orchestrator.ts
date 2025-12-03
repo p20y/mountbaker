@@ -5,7 +5,7 @@
  * Handles retry logic, error handling, and stores results in Supabase.
  */
 
-import type { OrchestratorInput, OrchestratorOutput } from '@/types/models'
+import type { OrchestratorInput, OrchestratorOutput, VerificationReport, StatementMetadata } from '@/types/models'
 import { parsePDF, extractPDFText, validatePDF } from '@/lib/pdf/parser'
 import { extractFinancialData } from '@/lib/agents/extraction'
 import { generateDiagram } from '@/lib/agents/generation'
@@ -13,6 +13,7 @@ import { verifyDiagram } from '@/lib/agents/verification'
 import { createStatement, updateStatementStatus, insertFlows, createVerification } from '@/lib/supabase/database'
 import { uploadPDF, uploadDiagram } from '@/lib/supabase/storage'
 import type { AnalysisOutput } from '@/lib/schemas'
+import { logger } from '@/lib/logging'
 
 const MAX_VERIFICATION_RETRIES = 3
 const DEFAULT_ACCURACY_THRESHOLD = 0.001 // 0.1%
@@ -24,9 +25,15 @@ export async function orchestrate(
   input: OrchestratorInput
 ): Promise<OrchestratorOutput> {
   const startTime = Date.now()
+  const orchestrationStartTime = Date.now()
   let retries = 0
   let statementId: string | null = null
   let extractedFlows: AnalysisOutput | null = null
+
+  logger.logAgentInvocation('orchestrator', {
+    format: input.format,
+    options: input.options
+  })
 
   try {
     // Step 1: Parse PDF
@@ -60,7 +67,13 @@ export async function orchestrate(
     await uploadPDF(pdfBuffer, `${statementId}.pdf`, statementId)
 
     // Step 2: Extract financial data
+    const extractionStartTime = Date.now()
     try {
+      logger.logAgentInvocation('extraction', {
+        isScanned: pdfTextResult.isScanned,
+        textLength: pdfTextResult.text?.length || 0
+      })
+
       extractedFlows = await extractFinancialData(
         {
           pdfText: pdfTextResult.text,
@@ -71,6 +84,21 @@ export async function orchestrate(
           maxRetries: input.options?.maxRetries ?? 2
         }
       )
+
+      const extractionDuration = Date.now() - extractionStartTime
+      logger.logExtractionResult(
+        extractedFlows.flows.length,
+        extractedFlows.confidence,
+        {
+          metadata: extractedFlows.metadata
+        },
+        extractionDuration
+      )
+      logger.logPerformance({
+        stage: 'extraction',
+        duration: extractionDuration,
+        success: true
+      })
 
       // Store extracted flows in database
       await insertFlows(
@@ -87,6 +115,16 @@ export async function orchestrate(
 
       await updateStatementStatus(statementId, 'processing')
     } catch (error) {
+      const extractionDuration = Date.now() - extractionStartTime
+      logger.logError('extraction', error instanceof Error ? error : new Error(String(error)), {
+        statementId,
+        partialFlows: extractedFlows?.flows.length || 0
+      })
+      logger.logPerformance({
+        stage: 'extraction',
+        duration: extractionDuration,
+        success: false
+      })
       await updateStatementStatus(statementId, 'failed')
       throw {
         code: 'EXTRACTION_ERROR',
@@ -97,8 +135,13 @@ export async function orchestrate(
     }
 
     // Step 3: Generate diagram
+    const generationStartTime = Date.now()
     let diagramBuffer: Buffer
     try {
+      logger.logAgentInvocation('generation', {
+        flowsCount: extractedFlows.flows.length
+      })
+
       const generationResult = await generateDiagram(
         {
           flows: extractedFlows.flows,
@@ -110,6 +153,15 @@ export async function orchestrate(
       )
 
       diagramBuffer = generationResult.diagram
+      const generationDuration = Date.now() - generationStartTime
+      logger.logGenerationResult(true, {
+        diagramSize: diagramBuffer.length
+      }, generationDuration)
+      logger.logPerformance({
+        stage: 'generation',
+        duration: generationDuration,
+        success: true
+      })
 
       // Upload diagram to storage
       await uploadDiagram(
@@ -119,6 +171,16 @@ export async function orchestrate(
         'image/png'
       )
     } catch (error) {
+      const generationDuration = Date.now() - generationStartTime
+      logger.logError('generation', error instanceof Error ? error : new Error(String(error)), {
+        statementId,
+        flowsCount: extractedFlows.flows.length
+      })
+      logger.logPerformance({
+        stage: 'generation',
+        duration: generationDuration,
+        success: false
+      })
       await updateStatementStatus(statementId, 'failed')
       throw {
         code: 'GENERATION_ERROR',
@@ -129,12 +191,19 @@ export async function orchestrate(
     }
 
     // Step 4: Verify diagram (with retry logic)
+    const verificationStartTime = Date.now()
     const accuracyThreshold = input.options?.accuracyThreshold ?? DEFAULT_ACCURACY_THRESHOLD
     let verificationResult
     let verificationPassed = false
 
     for (let attempt = 1; attempt <= MAX_VERIFICATION_RETRIES; attempt++) {
       try {
+        logger.logAgentInvocation('verification', {
+          attempt,
+          threshold: accuracyThreshold,
+          flowsCount: extractedFlows.flows.length
+        })
+
         verificationResult = await verifyDiagram(
           {
             diagram: diagramBuffer,
@@ -146,6 +215,21 @@ export async function orchestrate(
           }
         )
 
+        const verificationDuration = Date.now() - verificationStartTime
+        logger.logVerificationResult(
+          verificationResult.verified,
+          verificationResult.accuracy,
+          verificationResult.discrepancies,
+          verificationResult.report.reasoning,
+          verificationDuration
+        )
+        logger.logPerformance({
+          stage: 'verification',
+          duration: verificationDuration,
+          retries: attempt - 1,
+          success: verificationResult.verified
+        })
+
         if (verificationResult.verified) {
           verificationPassed = true
           break
@@ -153,7 +237,7 @@ export async function orchestrate(
           // Verification failed, regenerate diagram with enhanced prompt
           if (attempt < MAX_VERIFICATION_RETRIES) {
             retries++
-            console.warn(`Verification failed on attempt ${attempt}, regenerating diagram...`)
+            logger.logRetry('verification', attempt, MAX_VERIFICATION_RETRIES, 'Verification accuracy below threshold')
             
             // Regenerate with enhanced prompt (the generation agent handles this)
             const regenerationResult = await generateDiagram(
@@ -176,11 +260,23 @@ export async function orchestrate(
           }
         }
       } catch (error) {
+        const verificationDuration = Date.now() - verificationStartTime
+        logger.logError('verification', error instanceof Error ? error : new Error(String(error)), {
+          attempt,
+          statementId
+        })
+        logger.logPerformance({
+          stage: 'verification',
+          duration: verificationDuration,
+          retries: attempt - 1,
+          success: false
+        })
         if (attempt === MAX_VERIFICATION_RETRIES) {
           throw error
         }
         // Retry on error
         retries++
+        logger.logRetry('verification', attempt, MAX_VERIFICATION_RETRIES, 'Verification error')
       }
     }
 
@@ -206,13 +302,23 @@ export async function orchestrate(
     await updateStatementStatus(statementId, verificationPassed ? 'completed' : 'failed')
 
     const processingTime = Date.now() - startTime
+    const orchestrationDuration = Date.now() - orchestrationStartTime
 
-    // Return success result
+    logger.logPerformance({
+      stage: 'orchestration',
+      duration: orchestrationDuration,
+      retries,
+      success: verificationPassed
+    })
+
+    // Return success result with complete data
     return {
       success: verificationPassed,
       diagram: diagramBuffer,
       reasoning: verificationResult?.report.reasoning || 'Verification completed',
       accuracy: verificationResult?.accuracy || 0,
+      verificationReport: verificationResult?.report,
+      statementMetadata: extractedFlows.metadata,
       metadata: {
         processingTime,
         retries,
@@ -222,6 +328,20 @@ export async function orchestrate(
   } catch (error: any) {
     // Handle errors gracefully
     const processingTime = Date.now() - startTime
+    const orchestrationDuration = Date.now() - orchestrationStartTime
+
+    logger.logError('orchestrator', error, {
+      statementId,
+      partialFlows: extractedFlows?.flows.length || 0,
+      retries,
+      processingTime
+    })
+    logger.logPerformance({
+      stage: 'orchestration',
+      duration: orchestrationDuration,
+      retries,
+      success: false
+    })
 
     // Update statement status if we have an ID
     if (statementId) {
@@ -229,7 +349,10 @@ export async function orchestrate(
         await updateStatementStatus(statementId, 'failed')
       } catch (updateError) {
         // Log but don't throw
-        console.error('Failed to update statement status:', updateError)
+        logger.logError('database', updateError instanceof Error ? updateError : new Error(String(updateError)), {
+          operation: 'updateStatementStatus',
+          statementId
+        })
       }
     }
 
@@ -239,6 +362,7 @@ export async function orchestrate(
       diagram: Buffer.alloc(0), // Empty buffer on error
       reasoning: error.message || 'Processing failed',
       accuracy: 0,
+      statementMetadata: extractedFlows?.metadata,
       metadata: {
         processingTime,
         retries,

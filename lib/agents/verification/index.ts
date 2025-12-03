@@ -120,31 +120,39 @@ export async function verifyDiagram(
         throw new Error(`Failed to parse verification response: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`)
       }
 
-      // Validate the parsed response
-      const validated = VerificationReportSchema.parse({
-        ...parsedResponse,
-        timestamp: parsedResponse.timestamp ? new Date(parsedResponse.timestamp) : new Date()
-      })
-
-      // Calculate additional metrics
+      // Calculate additional metrics before validation
       const flowsTotal = input.originalFlows.length
-      const flowsVerified = flowsTotal - validated.discrepancies.length
-      const overallAccuracy = validated.overallAccuracy
+      const overallAccuracy = parsedResponse.overallAccuracy ?? 0
+      const discrepancies = parsedResponse.discrepancies ?? []
+      const flowsVerified = flowsTotal - discrepancies.length
 
       // Determine if verification passed (all flows within threshold)
-      const passed = validated.discrepancies.length === 0 && overallAccuracy >= (1 - threshold)
+      const passed = discrepancies.length === 0 && overallAccuracy >= (1 - threshold)
+      
+      // Calculate confidence score if not provided
+      // Confidence is based on accuracy and number of discrepancies
+      const confidenceScore = parsedResponse.confidenceScore ?? 
+        Math.max(0, Math.min(1, overallAccuracy * (1 - (discrepancies.length / Math.max(flowsTotal, 1)))))
+
+      // Validate the parsed response with all required fields
+      const validated = VerificationReportSchema.parse({
+        timestamp: parsedResponse.timestamp ? new Date(parsedResponse.timestamp) : new Date(),
+        overallAccuracy,
+        flowsVerified,
+        flowsTotal,
+        discrepancies,
+        passed,
+        confidenceScore,
+        reasoning: parsedResponse.reasoning || 'Verification completed',
+        valueComparisons: parsedResponse.valueComparisons
+      })
 
       // Create verification output
       const verificationOutput: VerificationOutput = {
         verified: passed,
         accuracy: overallAccuracy,
         discrepancies: validated.discrepancies,
-        report: {
-          ...validated,
-          flowsVerified,
-          flowsTotal,
-          passed
-        }
+        report: validated
       }
 
       return verificationOutput

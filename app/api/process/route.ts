@@ -11,6 +11,7 @@ import type { OrchestratorInput } from '@/types/models'
 import { getStatement, updateStatementStatus } from '@/lib/supabase/database'
 import { getPDFUrl } from '@/lib/supabase/storage'
 import { isSupabaseConfigured } from '@/lib/supabase/server'
+import { formatResponse } from '@/lib/formatters/response'
 
 export async function POST(request: NextRequest) {
   try {
@@ -71,22 +72,16 @@ export async function POST(request: NextRequest) {
     // Process (this may take a while, so in production you might want to use background jobs)
     const result = await orchestrate(orchestratorInput)
 
-    // Return processing result
-    return NextResponse.json({
-      success: result.success,
+    // Format response using formatter
+    const formattedResponse = formatResponse(result, {
       statementId,
-      processing: {
-        completed: true,
-        accuracy: result.accuracy,
-        reasoning: result.reasoning,
-        metadata: result.metadata
-      },
-      error: result.error ? {
-        code: result.error.code,
-        message: result.error.message,
-        stage: result.error.stage
-      } : undefined
+      statementMetadata: result.statementMetadata,
+      verificationReport: result.verificationReport,
+      includeDiagram: true
     })
+
+    // Return formatted response
+    return NextResponse.json(formattedResponse)
   } catch (error) {
     console.error('Processing error:', error)
     return NextResponse.json(

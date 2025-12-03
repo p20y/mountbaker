@@ -129,6 +129,8 @@ export interface OrchestratorOutput {
   diagram: Buffer
   reasoning: string
   accuracy: number
+  verificationReport?: VerificationReport
+  statementMetadata?: StatementMetadata
   metadata: {
     processingTime: number
     retries: number
