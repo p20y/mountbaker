@@ -1,5 +1,5 @@
-// This file will be generated from Supabase schema
-// For now, defining basic types manually
+// Database types matching the Supabase schema
+// These types correspond to the tables defined in supabase/migrations/001_initial_schema.sql
 
 export interface Database {
   public: {
@@ -36,8 +36,10 @@ export interface Database {
           statement_id: string
           source: string
           target: string
-          amount: number
+          amount: number // NUMERIC(15, 2) in database
           category: 'revenue' | 'expense' | 'asset' | 'liability' | 'equity'
+          line_item: string | null
+          statement_section: string | null
           created_at: string
         }
         Insert: {
@@ -47,6 +49,8 @@ export interface Database {
           target: string
           amount: number
           category: 'revenue' | 'expense' | 'asset' | 'liability' | 'equity'
+          line_item?: string | null
+          statement_section?: string | null
           created_at?: string
         }
         Update: {
@@ -56,6 +60,8 @@ export interface Database {
           target?: string
           amount?: number
           category?: 'revenue' | 'expense' | 'asset' | 'liability' | 'equity'
+          line_item?: string | null
+          statement_section?: string | null
           created_at?: string
         }
       }
@@ -63,17 +69,25 @@ export interface Database {
         Row: {
           id: string
           statement_id: string
-          accuracy: number
+          accuracy: number // NUMERIC(5, 4) in database
           verified: boolean
           reasoning: string
+          flows_verified: number
+          flows_total: number
+          discrepancies: Record<string, unknown> | null // JSONB
+          value_comparisons: Record<string, unknown> | null // JSONB
           created_at: string
         }
         Insert: {
           id?: string
           statement_id: string
           accuracy: number
-          verified: boolean
+          verified?: boolean
           reasoning: string
+          flows_verified?: number
+          flows_total?: number
+          discrepancies?: Record<string, unknown> | null
+          value_comparisons?: Record<string, unknown> | null
           created_at?: string
         }
         Update: {
@@ -82,6 +96,10 @@ export interface Database {
           accuracy?: number
           verified?: boolean
           reasoning?: string
+          flows_verified?: number
+          flows_total?: number
+          discrepancies?: Record<string, unknown> | null
+          value_comparisons?: Record<string, unknown> | null
           created_at?: string
         }
       }

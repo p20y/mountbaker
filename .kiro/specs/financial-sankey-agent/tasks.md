@@ -25,21 +25,21 @@
     - **Property 12: Inter-agent data contract compliance**
     - **Validates: Requirements 6.2**
 
-- [ ] 3. Set up Supabase database and storage
-  - [ ] 3.1 Create database schema
+- [x] 3. Set up Supabase database and storage
+  - [x] 3.1 Create database schema
     - Create statements table (id, user_id, filename, status, created_at)
     - Create flows table (id, statement_id, source, target, amount, category)
     - Create verifications table (id, statement_id, accuracy, verified, reasoning, created_at)
     - Set up Row Level Security policies
     - _Requirements: 7.2, 7.3_
 
-  - [ ] 3.2 Configure Supabase Storage buckets
+  - [x] 3.2 Configure Supabase Storage buckets
     - Create bucket for PDF uploads
     - Create bucket for generated diagrams
     - Configure access policies and CORS
     - _Requirements: 7.1_
 
-  - [ ]* 3.3 Write unit tests for database operations
+  - [x]* 3.3 Write unit tests for database operations
     - Test statement CRUD operations
     - Test flow data insertion and retrieval
     - Test verification record creation
